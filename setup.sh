@@ -103,3 +103,32 @@ configure_settings() {
     APPLIED+=("Settings (merged into ~/.claude/settings.json)")
     log_ok "Merged settings into ~/.claude/settings.json"
 }
+
+install_plugins() {
+    log_info "Installing plugins..."
+
+    local plugins=(
+        "superpowers@claude-plugins-official"
+        "code-simplifier@claude-plugins-official"
+        "context7@claude-plugins-official"
+    )
+
+    local installed
+    installed=$(claude plugin list 2>/dev/null || echo "")
+
+    for plugin in "${plugins[@]}"; do
+        if echo "$installed" | grep -qF "$plugin"; then
+            SKIPPED+=("Plugin: $plugin (already installed)")
+            log_ok "Plugin already installed: $plugin"
+        else
+            log_info "Installing plugin: $plugin"
+            if claude plugin install "$plugin" 2>&1; then
+                APPLIED+=("Plugin: $plugin")
+                log_ok "Installed plugin: $plugin"
+            else
+                log_fail "Failed to install plugin: $plugin"
+                FAILURES+=("Plugin: $plugin")
+            fi
+        fi
+    done
+}
