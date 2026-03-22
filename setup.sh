@@ -132,3 +132,55 @@ install_plugins() {
         fi
     done
 }
+
+configure_mcps() {
+    log_info "Configuring MCP servers..."
+
+    local existing_mcps
+    existing_mcps=$(claude mcp list 2>/dev/null || echo "")
+
+    # Google Calendar (remote HTTP)
+    if echo "$existing_mcps" | grep -q "Google Calendar"; then
+        SKIPPED+=("MCP: claude.ai Google Calendar (already registered)")
+        log_ok "MCP already registered: claude.ai Google Calendar"
+    else
+        log_info "Adding MCP: claude.ai Google Calendar"
+        if claude mcp add --transport http -s user "claude.ai Google Calendar" https://gcal.mcp.claude.com/mcp 2>&1; then
+            APPLIED+=("MCP: claude.ai Google Calendar")
+            log_ok "Added MCP: claude.ai Google Calendar"
+        else
+            log_fail "Failed to add MCP: claude.ai Google Calendar"
+            FAILURES+=("MCP: claude.ai Google Calendar")
+        fi
+    fi
+
+    # Gmail (remote HTTP)
+    if echo "$existing_mcps" | grep -q "Gmail"; then
+        SKIPPED+=("MCP: claude.ai Gmail (already registered)")
+        log_ok "MCP already registered: claude.ai Gmail"
+    else
+        log_info "Adding MCP: claude.ai Gmail"
+        if claude mcp add --transport http -s user "claude.ai Gmail" https://gmail.mcp.claude.com/mcp 2>&1; then
+            APPLIED+=("MCP: claude.ai Gmail")
+            log_ok "Added MCP: claude.ai Gmail"
+        else
+            log_fail "Failed to add MCP: claude.ai Gmail"
+            FAILURES+=("MCP: claude.ai Gmail")
+        fi
+    fi
+
+    # Sequential Thinking (npx stdio)
+    if echo "$existing_mcps" | grep -q "sequential-thinking"; then
+        SKIPPED+=("MCP: sequential-thinking (already registered)")
+        log_ok "MCP already registered: sequential-thinking"
+    else
+        log_info "Adding MCP: sequential-thinking"
+        if claude mcp add -s user sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking 2>&1; then
+            APPLIED+=("MCP: sequential-thinking")
+            log_ok "Added MCP: sequential-thinking"
+        else
+            log_fail "Failed to add MCP: sequential-thinking"
+            FAILURES+=("MCP: sequential-thinking")
+        fi
+    fi
+}
