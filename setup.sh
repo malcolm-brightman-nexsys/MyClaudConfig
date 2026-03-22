@@ -49,3 +49,57 @@ check_deps() {
     fi
     log_ok "Claude CLI found"
 }
+
+configure_settings() {
+    log_info "Configuring settings..."
+
+    local repo_settings="$SCRIPT_DIR/settings.json"
+    local claude_dir="$HOME/.claude"
+    local target_settings="$claude_dir/settings.json"
+
+    if [ ! -f "$repo_settings" ]; then
+        log_fail "settings.json not found in repo"
+        FAILURES+=("Settings: settings.json not found in repo")
+        return 1
+    fi
+
+    mkdir -p "$claude_dir"
+
+    if [ ! -f "$target_settings" ]; then
+        cp "$repo_settings" "$target_settings"
+        APPLIED+=("Settings (created ~/.claude/settings.json)")
+        log_ok "Created ~/.claude/settings.json"
+        return 0
+    fi
+
+    # Deep merge: repo values win, existing extra keys preserved
+    local merged
+    merged=$(node -e "
+        const fs = require('fs');
+        const repo = JSON.parse(fs.readFileSync('$repo_settings', 'utf8'));
+        const existing = JSON.parse(fs.readFileSync('$target_settings', 'utf8'));
+        function deepMerge(target, source) {
+            for (const key of Object.keys(source)) {
+                if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+                    && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+                    deepMerge(target[key], source[key]);
+                } else {
+                    target[key] = source[key];
+                }
+            }
+            return target;
+        }
+        const result = deepMerge(existing, repo);
+        console.log(JSON.stringify(result, null, 2));
+    " 2>&1)
+
+    if [ $? -ne 0 ]; then
+        log_fail "Failed to merge settings: $merged"
+        FAILURES+=("Settings: JSON merge failed")
+        return 1
+    fi
+
+    echo "$merged" > "$target_settings"
+    APPLIED+=("Settings (merged into ~/.claude/settings.json)")
+    log_ok "Merged settings into ~/.claude/settings.json"
+}
