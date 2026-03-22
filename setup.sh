@@ -184,3 +184,64 @@ configure_mcps() {
         fi
     fi
 }
+
+print_summary() {
+    echo ""
+    echo "========================================"
+    echo "  Claude Config Setup Summary"
+    echo "========================================"
+
+    local applied_count=${#APPLIED[@]}
+    local skipped_count=${#SKIPPED[@]}
+    local failure_count=${#FAILURES[@]}
+
+    if [ "$applied_count" -gt 0 ]; then
+        echo ""
+        log_ok "Applied ($applied_count):"
+        for item in "${APPLIED[@]}"; do
+            echo "    - $item"
+        done
+    fi
+
+    if [ "$skipped_count" -gt 0 ]; then
+        echo ""
+        log_info "Skipped ($skipped_count):"
+        for item in "${SKIPPED[@]}"; do
+            echo "    - $item"
+        done
+    fi
+
+    if [ "$failure_count" -gt 0 ]; then
+        echo ""
+        log_fail "Failed ($failure_count):"
+        for item in "${FAILURES[@]}"; do
+            echo "    - $item"
+        done
+    fi
+
+    echo ""
+    echo "========================================"
+
+    if [ "$failure_count" -gt 0 ]; then
+        return 1
+    fi
+    return 0
+}
+
+# Main execution
+main() {
+    echo ""
+    echo "========================================"
+    echo "  Claude Code Setup"
+    echo "========================================"
+    echo ""
+
+    check_deps || { print_summary; exit 1; }
+    configure_settings
+    install_plugins
+    configure_mcps
+    print_summary
+    exit $?
+}
+
+main
